@@ -12,7 +12,80 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 )
+
+// Structs
+type AddressXML struct {
+	Name        string `xml:"name,omitempty"`
+	Description string `xml:"description,omitempty"`
+	IPPrefix    string `xml:"ip-prefix,omitempty"`
+}
+
+type AddressSetXML struct {
+	XMLName  xml.Name `xml:"address-set,omitempty"`
+	Name           string          `xml:"name,omitempty"`
+	AddressSetName string          `xml:"address-set-name,omitempty"`
+	Description    string          `xml:"description,omitempty"`
+	Address        []AddressXML    `xml:"address,omitempty"`
+	AddressSet     []AddressSetXML `xml:"address-set,omitempty"`
+}
+
+type ConfigurationXML struct {
+	XMLName  xml.Name `xml:"configuration,omitempty"`
+	Security struct {
+		AddressBook struct {
+			Name       string          `xml:"name,omitempty"`
+			Address    []AddressXML    `xml:"address,omitempty"`
+			AddressSet []AddressSetXML `xml:"address-set,omitempty"`
+		} `xml:"address-book,omitempty"`
+	} `xml:"security,omitempty"`
+}
+
+func (c ConfigurationXML)ToRawMethod() RawMethod {
+	getConfigFmt :=
+	`<get-config>
+		<source>
+			<running/>
+		</source>
+		<filter type=\"subtree\">
+			%s
+		</filter>
+	</get-config>`
+	xmlStr ,_ := xml.Marshal(c)
+	fullXML := fmt.Sprintf(getConfigFmt, xmlStr)
+	return RawMethod(fullXML)
+}
+
+type DataXML struct {
+	XMLName  xml.Name `xml:"data,omitempty"`
+	Configuration ConfigurationXML `xml:"configuration"`
+}
+
+type EditConfigXML struct {
+	XMLName  xml.Name `xml:"configuration,omitempty"`
+	Security struct {
+		AddressBook struct {
+			Name       string          `xml:"name,omitempty"`
+			Address    []AddressXML    `xml:"address,omitempty"`
+			AddressSet []AddressSetXML `xml:"address-set,omitempty"`
+		} `xml:"address-book,omitempty"`
+	} `xml:"security,omitempty"`
+}
+
+func (ec EditConfigXML) ToRawMethod() RawMethod {
+	editConfigFmt :=
+	`<edit-config> 
+		<target> 
+			<candidate/> 
+		</target>
+		<config>
+			%s
+		</config>
+	</edit-config>`
+	xmlStr, _ := xml.Marshal(ec)
+	return RawMethod(fmt.Sprintf(editConfigFmt, xmlStr))
+}
 
 // RPCMessage represents an RPC Message to be sent.
 type RPCMessage struct {
@@ -54,7 +127,7 @@ func (m *RPCMessage) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 type RPCReply struct {
 	XMLName   xml.Name   `xml:"rpc-reply"`
 	Errors    []RPCError `xml:"rpc-error,omitempty"`
-	Data      string     `xml:",innerxml"`
+	Data      DataXML    `xml:"data,omitempty"`
 	Ok        bool       `xml:",omitempty"`
 	RawReply  string     `xml:"-"`
 	MessageID string     `xml:"-"`
@@ -63,7 +136,11 @@ type RPCReply struct {
 func newRPCReply(rawXML []byte, ErrOnWarning bool, messageID string) (*RPCReply, error) {
 	reply := &RPCReply{}
 	reply.RawReply = string(rawXML)
+	if strings.Contains(reply.RawReply, "<ok/>") {
+		reply.Ok = true
+	}
 
+	//if err := xml.Unmarshal(reply.Data, )
 	if err := xml.Unmarshal(rawXML, reply); err != nil {
 		return nil, err
 	}
@@ -99,7 +176,7 @@ func (re *RPCError) Error() string {
 
 // RPCMethod defines the interface for creating an RPC method.
 type RPCMethod interface {
-	MarshalMethod() string
+	MarshalMethod() string 
 }
 
 // RawMethod defines how a raw text request will be responded to
@@ -125,10 +202,12 @@ func MethodGetConfig(source string) RawMethod {
 	return RawMethod(fmt.Sprintf("<get-config><source><%s/></source></get-config>", source))
 }
 
-func MethodCommitSetTimeout(timeout int) RawMethod {
-	return RawMethod(fmt.Sprintf("<commit><confirmed/><confirm-timeout>%d</confirm-timeout></commit>", timeout))
+// MethodCommitSetTimeout commit changes with timeout (in milliseconds)
+func MethodCommitSetTimeout() RawMethod {
+	return RawMethod("<commit/>")
 }
 
+// MethodDiscardChanges discard changes
 func MethodDiscardChanges() RawMethod {
 	return RawMethod("<discard-changes/>")
 }
