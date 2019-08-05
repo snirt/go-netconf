@@ -125,6 +125,14 @@ func MethodGetConfig(source string) RawMethod {
 	return RawMethod(fmt.Sprintf("<get-config><source><%s/></source></get-config>", source))
 }
 
+func MethodCommitSetTimeout(timeout int) RawMethod {
+	return RawMethod(fmt.Sprintf("<commit><confirmed/><confirm-timeout>%d</confirm-timeout></commit>", timeout))
+}
+
+func MethodDiscardChanges() RawMethod {
+	return RawMethod("<discard-changes/>")
+}
+
 var msgID = uuid
 
 // uuid generates a "good enough" uuid without adding external dependencies
