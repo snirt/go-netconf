@@ -41,7 +41,12 @@ type ConfigurationXML struct {
 		} `xml:"address-book,omitempty"`
 	} `xml:"security,omitempty"`
 }
+func trimXML(str string) string {
+	str = strings.Replace(str, "\t", "", -1)
+	return strings.Replace(str, "\n", "", -1)
+}
 
+// ToRawMethod chain xml string with marshalled xml
 func (c ConfigurationXML)ToRawMethod() RawMethod {
 	getConfigFmt :=
 	`<get-config>
@@ -54,7 +59,7 @@ func (c ConfigurationXML)ToRawMethod() RawMethod {
 	</get-config>`
 	xmlStr ,_ := xml.Marshal(c)
 	fullXML := fmt.Sprintf(getConfigFmt, xmlStr)
-	return RawMethod(fullXML)
+	return RawMethod(trimXML(fullXML))
 }
 
 type DataXML struct {
@@ -84,7 +89,7 @@ func (ec EditConfigXML) ToRawMethod() RawMethod {
 		</config>
 	</edit-config>`
 	xmlStr, _ := xml.Marshal(ec)
-	return RawMethod(fmt.Sprintf(editConfigFmt, xmlStr))
+	return RawMethod(trimXML(fmt.Sprintf(editConfigFmt, xmlStr)))
 }
 
 // RPCMessage represents an RPC Message to be sent.
@@ -133,7 +138,7 @@ type RPCReply struct {
 	MessageID string     `xml:"-"`
 }
 
-func newRPCReply(rawXML []byte, ErrOnWarning bool, messageID string) (*RPCReply, error) {
+func NewRPCReply(rawXML []byte, ErrOnWarning bool, messageID string) (*RPCReply, error) {
 	reply := &RPCReply{}
 	reply.RawReply = string(rawXML)
 	if strings.Contains(reply.RawReply, "<ok/>") {
