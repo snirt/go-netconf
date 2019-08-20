@@ -207,8 +207,8 @@ func MethodGetConfig(source string) RawMethod {
 	return RawMethod(fmt.Sprintf("<get-config><source><%s/></source></get-config>", source))
 }
 
-// MethodCommitSetTimeout commit changes with timeout (in milliseconds)
-func MethodCommitSetTimeout() RawMethod {
+// MethodCommit commit changes
+func MethodCommit() RawMethod {
 	return RawMethod("<commit/>")
 }
 

@@ -112,7 +112,7 @@ func DialSSH(target string, config *ssh.ClientConfig) (*Session, error) {
 	var t TransportSSH
 	err := t.Dial(target, config)
 	if err != nil {
-		t.Close()
+		//t.Close()
 		return nil, err
 	}
 	return NewSession(&t), nil
