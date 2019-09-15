@@ -16,7 +16,16 @@ import (
 )
 
 // Structs
+
+type AddressBookXML struct {
+	XMLName  xml.Name `xml:"address-book,omitempty"`
+	Name       string          `xml:"name,omitempty"`
+	Address    []AddressXML    `xml:"address,omitempty"`
+	AddressSet []AddressSetXML `xml:"address-set,omitempty"`
+}
+
 type AddressXML struct {
+	XMLOperation string `xml:"operation,attr,omitempty"`
 	Name        string `xml:"name,omitempty"`
 	Description string `xml:"description,omitempty"`
 	IPPrefix    string `xml:"ip-prefix,omitempty"`
@@ -24,6 +33,7 @@ type AddressXML struct {
 
 type AddressSetXML struct {
 	XMLName  xml.Name `xml:"address-set,omitempty"`
+	XMLOperation string `xml:"operation,attr,omitempty"`
 	Name           string          `xml:"name,omitempty"`
 	AddressSetName string          `xml:"address-set-name,omitempty"`
 	Description    string          `xml:"description,omitempty"`
@@ -34,11 +44,7 @@ type AddressSetXML struct {
 type ConfigurationXML struct {
 	XMLName  xml.Name `xml:"configuration,omitempty"`
 	Security struct {
-		AddressBook struct {
-			Name       string          `xml:"name,omitempty"`
-			Address    []AddressXML    `xml:"address,omitempty"`
-			AddressSet []AddressSetXML `xml:"address-set,omitempty"`
-		} `xml:"address-book,omitempty"`
+		AddressBook AddressBookXML `xml:"address-book,omitempty"`
 	} `xml:"security,omitempty"`
 }
 func trimXML(str string) string {
@@ -70,11 +76,7 @@ type DataXML struct {
 type EditConfigXML struct {
 	XMLName  xml.Name `xml:"configuration,omitempty"`
 	Security struct {
-		AddressBook struct {
-			Name       string          `xml:"name,omitempty"`
-			Address    []AddressXML    `xml:"address,omitempty"`
-			AddressSet []AddressSetXML `xml:"address-set,omitempty"`
-		} `xml:"address-book,omitempty"`
+		AddressBook AddressBookXML `xml:"address-book,omitempty"`
 	} `xml:"security,omitempty"`
 }
 
@@ -90,6 +92,33 @@ func (ec EditConfigXML) ToRawMethod() RawMethod {
 	</edit-config>`
 	xmlStr, _ := xml.Marshal(ec)
 	return RawMethod(trimXML(fmt.Sprintf(editConfigFmt, xmlStr)))
+}
+
+type DeleteConfigXML struct {
+	XMLName  xml.Name `xml:"configuration,omitempty"`
+	Security struct {
+		AddressBook AddressBookXML `xml:"address-book,omitempty"`
+	} `xml:"security,omitempty"`
+}
+
+func (dc DeleteConfigXML) ToRawMethod() RawMethod {
+	for i, _ := range dc.Security.AddressBook.AddressSet {
+		dc.Security.AddressBook.AddressSet[i].XMLOperation = "delete"
+	}
+	for i, _ := range dc.Security.AddressBook.Address {
+		dc.Security.AddressBook.Address[i].XMLOperation = "delete"
+	}
+	deleteConfigFmt :=
+	`<edit-config>
+		<target>
+			<candidate/>
+		</target>
+		<config>
+			%s
+		</config>
+	</edit-config>`
+	xmlStr, _ := xml.Marshal(dc)
+	return RawMethod(trimXML(fmt.Sprintf(deleteConfigFmt, xmlStr)))
 }
 
 // RPCMessage represents an RPC Message to be sent.
